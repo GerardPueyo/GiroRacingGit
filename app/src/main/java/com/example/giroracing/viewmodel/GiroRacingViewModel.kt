@@ -8,9 +8,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 data class Obstacle(val xOffset: Float, var y: Float, val color: Color)
@@ -28,31 +25,28 @@ class GiroRacingViewModel : ViewModel() {
     var score by mutableLongStateOf(0L)
         private set
 
-    var isNitroActive by mutableStateOf(false)
+    var currentSpeed by mutableFloatStateOf(0f) // Empieza en 0 km/h
         private set
 
-    var nitroLevel by mutableFloatStateOf(1f) // 0 to 1
+    // Cambiamos a mutableStateOf para que Compose detecte el cambio y refresque la UI
+    var isAccelerating by mutableStateOf(false)
         private set
-
-    var currentSpeed by mutableFloatStateOf(0f)
+    var isBraking by mutableStateOf(false)
         private set
-
-    private var isAccelerating = false
-    private var isBraking = false
 
     val obstacles = mutableStateListOf<Obstacle>()
 
-    private val maxNormalSpeed = 15f
-    private val nitroSpeed = 28f
-    private val acceleration = 0.2f
-    private val deceleration = 0.1f
-    private val brakeForce = 0.5f
+    private val maxSpeed = 50f           // 500 km/h
+    private val accelerationRate = 0.35f
+    private val decelerationRate = 0.05f // Fricción natural (lenta)
+    private val brakeForce = 0.8f       // Freno (rápido)
     
     private var lastSpawnTime = 0L
 
     fun updateOffset(tiltX: Float) {
         if (isGameOver) return
-        val sensitivity = if (isNitroActive) 20f else 15f
+        // Solo giramos si el coche se está moviendo
+        val sensitivity = if (currentSpeed > 0) 18f else 0f
         carXOffsetPx -= (tiltX * sensitivity)
     }
 
@@ -60,25 +54,12 @@ class GiroRacingViewModel : ViewModel() {
         carXOffsetPx = carXOffsetPx.coerceIn(minX, maxX)
     }
 
-    fun setAccelerating(active: Boolean) {
+    fun updateAcceleration(active: Boolean) {
         isAccelerating = active
     }
 
-    fun setBraking(active: Boolean) {
+    fun updateBraking(active: Boolean) {
         isBraking = active
-    }
-
-    fun activateNitro() {
-        if (isGameOver || isNitroActive || nitroLevel < 0.2f) return
-        
-        viewModelScope.launch {
-            isNitroActive = true
-            while (nitroLevel > 0f && isNitroActive) {
-                delay(100)
-                nitroLevel -= 0.05f
-            }
-            isNitroActive = false
-        }
     }
 
     fun resetGame() {
@@ -86,8 +67,6 @@ class GiroRacingViewModel : ViewModel() {
         obstacles.clear()
         isGameOver = false
         score = 0
-        nitroLevel = 1f
-        isNitroActive = false
         currentSpeed = 0f
         isAccelerating = false
         isBraking = false
@@ -104,24 +83,18 @@ class GiroRacingViewModel : ViewModel() {
     ) {
         if (isGameOver) return
 
-        // Speed Logic
-        val targetMaxSpeed = if (isNitroActive) nitroSpeed else maxNormalSpeed
-        
+        // Lógica de Velocidad
         if (isBraking) {
             currentSpeed = (currentSpeed - brakeForce).coerceAtLeast(0f)
         } else if (isAccelerating) {
-            currentSpeed = (currentSpeed + acceleration).coerceAtMost(targetMaxSpeed)
+            currentSpeed = (currentSpeed + accelerationRate).coerceAtMost(maxSpeed)
         } else {
-            // Natural friction
-            currentSpeed = (currentSpeed - deceleration).coerceAtLeast(0f)
+            // Perder velocidad lentamente (fricción natural)
+            currentSpeed = (currentSpeed - decelerationRate).coerceAtLeast(0f)
         }
 
-        // Score based on speed
-        score += (currentSpeed / 5f).toLong()
-
-        if (!isNitroActive && nitroLevel < 1f) {
-            nitroLevel += 0.001f
-        }
+        // Puntuación exponencial basada en velocidad
+        score += (currentSpeed * currentSpeed / 50f).toLong()
 
         roadOffset = (roadOffset + currentSpeed) % 100f
 
@@ -147,21 +120,24 @@ class GiroRacingViewModel : ViewModel() {
         }
 
         val currentTime = System.currentTimeMillis()
-        val spawnInterval = if (isNitroActive) 800 else 1500
-        if (currentTime - lastSpawnTime > spawnInterval && obstacles.size < 5 && currentSpeed > 2f) {
-            val margin = 20f
-            val roadLeft = -roadWidth / 2 + margin
-            val roadRight = roadWidth / 2 - carWidth - margin
-            val randomX = Random.nextFloat() * (roadRight - roadLeft) + roadLeft
-            
-            obstacles.add(
-                Obstacle(
-                    randomX,
-                    -carHeight - 100f,
-                    Color(Random.nextFloat(), Random.nextFloat(), Random.nextFloat(), 1f)
+        // Solo spawneamos obstáculos si nos movemos a cierta velocidad
+        if (currentSpeed > 5f) {
+            val spawnInterval = (1500 * (15f / currentSpeed)).toLong().coerceAtLeast(350L)
+            if (currentTime - lastSpawnTime > spawnInterval && obstacles.size < 8) {
+                val margin = 20f
+                val roadLeft = -roadWidth / 2 + margin
+                val roadRight = roadWidth / 2 - carWidth - margin
+                val randomX = Random.nextFloat() * (roadRight - roadLeft) + roadLeft
+                
+                obstacles.add(
+                    Obstacle(
+                        randomX,
+                        -carHeight - 100f,
+                        Color(Random.nextFloat(), Random.nextFloat(), Random.nextFloat(), 1f)
+                    )
                 )
-            )
-            lastSpawnTime = currentTime
+                lastSpawnTime = currentTime
+            }
         }
     }
 
