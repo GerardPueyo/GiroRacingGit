@@ -10,7 +10,14 @@ class AccelerometerHandler(context: Context) {
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
-    fun start(onTiltChanged: (Float) -> Unit): SensorEventListener {
+    /**
+     * Checks if the accelerometer sensor is available on the device.
+     */
+    fun isAvailable(): Boolean = accelerometer != null
+
+    fun start(onTiltChanged: (Float) -> Unit): SensorEventListener? {
+        if (accelerometer == null) return null
+        
         val sensorListener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent?) {
                 if (event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
@@ -24,7 +31,9 @@ class AccelerometerHandler(context: Context) {
         return sensorListener
     }
 
-    fun stop(listener: SensorEventListener) {
-        sensorManager.unregisterListener(listener)
+    fun stop(listener: SensorEventListener?) {
+        listener?.let {
+            sensorManager.unregisterListener(it)
+        }
     }
 }

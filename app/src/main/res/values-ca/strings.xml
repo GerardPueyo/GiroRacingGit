@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">GiroRacing</string>
+    <string name="play">JUGAR</string>
+    <string name="shop">BOTIGA</string>
+    <string name="score">Puntuació: %1$d</string>
+    <string name="speed">Velocitat: %1$d km/h</string>
+    <string name="freno">FRE</string>
+    <string name="gas">GAS</string>
+    <string name="game_over">FI DEL JOC!</string>
+    <string name="retry">REINTENTAR</string>
+    <string name="menu">MENÚ</string>
+    <string name="owned">Comprat</string>
+    <string name="select">Seleccionar</string>
+    <string name="buy">Comprar %1$s</string>
+    <string name="formula1">Fórmula 1</string>
+    <string name="sedan">Sedan</string>
+</resources>

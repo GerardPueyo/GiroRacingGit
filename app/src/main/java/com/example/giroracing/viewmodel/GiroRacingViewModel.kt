@@ -8,11 +8,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.giroracing.data.UserPreferencesRepository
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 data class Obstacle(val xOffset: Float, var y: Float, val color: Color)
 
-class GiroRacingViewModel : ViewModel() {
+enum class CarModel {
+    F1, SEDAN
+}
+
+class GiroRacingViewModel(private val repository: UserPreferencesRepository) : ViewModel() {
     var carXOffsetPx by mutableFloatStateOf(0f)
         private set
 
@@ -25,27 +33,45 @@ class GiroRacingViewModel : ViewModel() {
     var score by mutableLongStateOf(0L)
         private set
 
-    var currentSpeed by mutableFloatStateOf(0f) // Empieza en 0 km/h
+    var currentSpeed by mutableFloatStateOf(0f)
         private set
 
-    // Cambiamos a mutableStateOf para que Compose detecte el cambio y refresque la UI
     var isAccelerating by mutableStateOf(false)
         private set
     var isBraking by mutableStateOf(false)
         private set
 
+    var carColor by mutableStateOf(Color(0xFFE10600))
+        private set
+        
+    var carModel by mutableStateOf(CarModel.F1)
+        private set
+
     val obstacles = mutableStateListOf<Obstacle>()
 
-    private val maxSpeed = 50f           // 500 km/h
+    private val maxSpeed = 50f
     private val accelerationRate = 0.35f
-    private val decelerationRate = 0.05f // Fricción natural (lenta)
-    private val brakeForce = 0.8f       // Freno (rápido)
+    private val decelerationRate = 0.05f
+    private val brakeForce = 0.8f
     
     private var lastSpawnTime = 0L
 
+    init {
+        // Load saved car skin
+        viewModelScope.launch {
+            repository.carColor.collectLatest { color ->
+                carColor = color
+            }
+        }
+        viewModelScope.launch {
+            repository.carModel.collectLatest { model ->
+                carModel = model
+            }
+        }
+    }
+
     fun updateOffset(tiltX: Float) {
         if (isGameOver) return
-        // Solo giramos si el coche se está moviendo
         val sensitivity = if (currentSpeed > 0) 18f else 0f
         carXOffsetPx -= (tiltX * sensitivity)
     }
@@ -60,6 +86,14 @@ class GiroRacingViewModel : ViewModel() {
 
     fun updateBraking(active: Boolean) {
         isBraking = active
+    }
+
+    fun setCarSkin(color: Color, model: CarModel) {
+        carColor = color
+        carModel = model
+        viewModelScope.launch {
+            repository.saveCarSkin(color, model)
+        }
     }
 
     fun resetGame() {
@@ -83,19 +117,15 @@ class GiroRacingViewModel : ViewModel() {
     ) {
         if (isGameOver) return
 
-        // Lógica de Velocidad
         if (isBraking) {
             currentSpeed = (currentSpeed - brakeForce).coerceAtLeast(0f)
         } else if (isAccelerating) {
             currentSpeed = (currentSpeed + accelerationRate).coerceAtMost(maxSpeed)
         } else {
-            // Perder velocidad lentamente (fricción natural)
             currentSpeed = (currentSpeed - decelerationRate).coerceAtLeast(0f)
         }
 
-        // Puntuación exponencial basada en velocidad
         score += (currentSpeed * currentSpeed / 50f).toLong()
-
         roadOffset = (roadOffset + currentSpeed) % 100f
 
         val iterator = obstacles.iterator()
@@ -120,7 +150,6 @@ class GiroRacingViewModel : ViewModel() {
         }
 
         val currentTime = System.currentTimeMillis()
-        // Solo spawneamos obstáculos si nos movemos a cierta velocidad
         if (currentSpeed > 5f) {
             val spawnInterval = (1500 * (15f / currentSpeed)).toLong().coerceAtLeast(350L)
             if (currentTime - lastSpawnTime > spawnInterval && obstacles.size < 8) {
