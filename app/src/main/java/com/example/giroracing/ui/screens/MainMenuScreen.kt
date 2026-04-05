@@ -21,6 +21,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.giroracing.R
 
+/**
+ * The landing screen when you open the app. 
+ * Provides options to start the game or visit the shop.
+ */
 @Composable
 fun MainMenuScreen(onPlayClick: () -> Unit, onShopClick: () -> Unit) {
     val backgroundGradient = Brush.verticalGradient(
@@ -40,7 +44,7 @@ fun MainMenuScreen(onPlayClick: () -> Unit, onShopClick: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Game Title with Shadow - Font size reduced to fit properly without clipping
+            // Game title
             Box(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 contentAlignment = Alignment.Center
@@ -48,7 +52,7 @@ fun MainMenuScreen(onPlayClick: () -> Unit, onShopClick: () -> Unit) {
                 val titleText = stringResource(id = R.string.app_name).uppercase()
                 Text(
                     text = titleText,
-                    fontSize = 28.sp, // Reduced to ensure it fits better
+                    fontSize = 28.sp,
                     fontWeight = FontWeight.Black,
                     color = Color(0xFF003300), // Shadow color
                     modifier = Modifier.offset(2.dp, 2.dp),
@@ -57,7 +61,7 @@ fun MainMenuScreen(onPlayClick: () -> Unit, onShopClick: () -> Unit) {
                 )
                 Text(
                     text = titleText,
-                    fontSize = 28.sp, // Reduced to ensure it fits better
+                    fontSize = 28.sp,
                     fontWeight = FontWeight.Black,
                     color = Color.White,
                     textAlign = TextAlign.Center,
@@ -67,6 +71,7 @@ fun MainMenuScreen(onPlayClick: () -> Unit, onShopClick: () -> Unit) {
             
             Spacer(modifier = Modifier.height(64.dp))
             
+            // Play button to start racing
             GameButton(
                 text = stringResource(id = R.string.play),
                 containerColor = Color(0xFFE10600),
@@ -77,6 +82,7 @@ fun MainMenuScreen(onPlayClick: () -> Unit, onShopClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Shop button to customize the car
             GameButton(
                 text = stringResource(id = R.string.shop),
                 containerColor = Color(0xFFFFD600),
@@ -88,6 +94,9 @@ fun MainMenuScreen(onPlayClick: () -> Unit, onShopClick: () -> Unit) {
     }
 }
 
+/**
+ * A custom reusable button with a stylized racing look.
+ */
 @Composable
 fun GameButton(
     text: String,

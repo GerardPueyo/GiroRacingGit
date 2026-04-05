@@ -39,6 +39,10 @@ import com.example.giroracing.sensors.AccelerometerHandler
 import com.example.giroracing.viewmodel.CarModel
 import com.example.giroracing.viewmodel.GiroRacingViewModel
 
+/**
+ * The main game screen where the racing happens.
+ * It handles the drawing loop, sensor inputs, and game UI.
+ */
 @Composable
 fun GiroRacingScreen(viewModel: GiroRacingViewModel, onBackToMenu: () -> Unit) {
     val context = LocalContext.current
@@ -51,7 +55,7 @@ fun GiroRacingScreen(viewModel: GiroRacingViewModel, onBackToMenu: () -> Unit) {
 
     var canvasSize by remember { mutableStateOf(Size.Zero) }
 
-    // Game Loop: Update game logic independently of drawing
+    // Start the game update loop when the screen is active and the canvas is ready
     LaunchedEffect(viewModel.isGameOver, canvasSize) {
         if (!viewModel.isGameOver && canvasSize.width > 0) {
             while (true) {
@@ -75,6 +79,7 @@ fun GiroRacingScreen(viewModel: GiroRacingViewModel, onBackToMenu: () -> Unit) {
         }
     }
 
+    // Set up the accelerometer to handle steering
     DisposableEffect(Unit) {
         val accelerometerHandler = AccelerometerHandler(context)
         var listener: android.hardware.SensorEventListener? = null
@@ -96,6 +101,7 @@ fun GiroRacingScreen(viewModel: GiroRacingViewModel, onBackToMenu: () -> Unit) {
             canvasSize = Size(coordinates.size.width.toFloat(), coordinates.size.height.toFloat())
         }
     ) {
+        // Main drawing area for the road, car, and obstacles
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
@@ -106,6 +112,7 @@ fun GiroRacingScreen(viewModel: GiroRacingViewModel, onBackToMenu: () -> Unit) {
                             var accActive = false
                             var brakeActive = false
                             
+                            // Detect touch on the bottom pedals
                             event.changes.forEach { change ->
                                 if (change.pressed) {
                                     val x = change.position.x
@@ -134,10 +141,10 @@ fun GiroRacingScreen(viewModel: GiroRacingViewModel, onBackToMenu: () -> Unit) {
             val centerX = (canvasWidth - carWidth) / 2
             val carY = (canvasHeight / 2) - (carHeight / 2)
 
-            // 1. Environment
+            // Background grass
             drawRect(color = Color(0xFF2D5A27))
 
-            // 2. Road
+            // The road
             val roadLeft = (canvasWidth - roadWidth) / 2
             drawRect(
                 color = Color(0xFF333333),
@@ -145,6 +152,7 @@ fun GiroRacingScreen(viewModel: GiroRacingViewModel, onBackToMenu: () -> Unit) {
                 size = Size(roadWidth, canvasHeight)
             )
 
+            // Animated lane dashes
             val dashLength = 40.dp.toPx()
             val totalLineLength = dashLength + 40.dp.toPx()
             val offsetTransition = (viewModel.roadOffset / 100f) * totalLineLength
@@ -154,14 +162,14 @@ fun GiroRacingScreen(viewModel: GiroRacingViewModel, onBackToMenu: () -> Unit) {
                 currentLineY += totalLineLength
             }
 
-            // 3. OBSTACLES
+            // Drawing obstacles
             viewModel.obstacles.forEach { obstacle ->
                 val obsX = centerX + obstacle.xOffset
                 drawRect(obstacle.color, Offset(obsX, obstacle.y), Size(carWidth * 0.8f, carHeight * 0.8f))
                 drawRect(Color(0xFF81D4FA), Offset(obsX + 5.dp.toPx(), obstacle.y + (carHeight * 0.8f) - 25.dp.toPx()), Size((carWidth * 0.8f) - 10.dp.toPx(), 15.dp.toPx()))
             }
 
-            // 4. PLAYER
+            // Handle car movement limits and draw the car
             val minX = roadLeft - centerX
             val maxX = (roadLeft + roadWidth) - centerX - carWidth
             viewModel.limitOffset(minX, maxX)
@@ -174,12 +182,11 @@ fun GiroRacingScreen(viewModel: GiroRacingViewModel, onBackToMenu: () -> Unit) {
                 drawSedan(currentCarX, carY, carWidth, carHeight, mainColor)
             }
 
-            // 5. PEDALS
+            // UI Pedals
             val pedalAreaY = canvasHeight * 0.82f
             val pedalWidth = 90.dp.toPx()
             val pedalHeight = 130.dp.toPx()
-            
-            // Brake (Left)
+
             drawRect(
                 color = Color.Red.copy(alpha = 0.8f), 
                 topLeft = Offset(30.dp.toPx(), pedalAreaY), 
@@ -187,7 +194,6 @@ fun GiroRacingScreen(viewModel: GiroRacingViewModel, onBackToMenu: () -> Unit) {
             )
             drawContextTextSmall(brakeText, 35.dp.toPx(), pedalAreaY + pedalHeight/2 + 10f)
 
-            // Gas (Right)
             drawRect(
                 color = Color.Green.copy(alpha = 0.8f), 
                 topLeft = Offset(canvasWidth - pedalWidth - 30.dp.toPx(), pedalAreaY), 
@@ -195,11 +201,12 @@ fun GiroRacingScreen(viewModel: GiroRacingViewModel, onBackToMenu: () -> Unit) {
             )
             drawContextTextSmall(gasText, canvasWidth - pedalWidth - 15.dp.toPx(), pedalAreaY + pedalHeight/2 + 10f)
 
-            // 6. UI
+            // HUD
             drawContextText(scoreText, 50f, 150f, size = 80f)
             drawContextText(speedText, 50f, 250f, size = 60f)
         }
 
+        // Show game over dialog when player crashes
         if (viewModel.isGameOver) {
             GameOverDialog(
                 score = viewModel.score,
@@ -210,6 +217,9 @@ fun GiroRacingScreen(viewModel: GiroRacingViewModel, onBackToMenu: () -> Unit) {
     }
 }
 
+/**
+ * Dialog shown when the player loses, displaying the score and options to restart.
+ */
 @Composable
 fun GameOverDialog(score: Long, onRetry: () -> Unit, onMenu: () -> Unit) {
     Box(
@@ -304,6 +314,9 @@ fun GameButtonDialog(
     }
 }
 
+/**
+ * Draws the Formula 1 style car on the canvas.
+ */
 fun DrawScope.drawF1(x: Float, y: Float, w: Float, h: Float, carColor: Color) {
     val tireColor = Color(0xFF1A1A1A)
     val bodyBlack = Color(0xFF111111)
@@ -326,11 +339,13 @@ fun DrawScope.drawF1(x: Float, y: Float, w: Float, h: Float, carColor: Color) {
     drawRect(carColor, Offset(x + w * 0.1f, y + h * 0.85f), Size(w * 0.8f, h * 0.08f))
 }
 
+/**
+ * Draws the Sedan style car on the canvas.
+ */
 fun DrawScope.drawSedan(x: Float, y: Float, w: Float, h: Float, carColor: Color) {
     val tireColor = Color(0xFF1A1A1A)
     val windowColor = Color(0xFF81D4FA)
-    
-    // Wheels
+
     val wheelW = w * 0.2f
     val wheelH = h * 0.15f
     drawRect(tireColor, Offset(x - 2.dp.toPx(), y + h * 0.15f), Size(wheelW, wheelH))
@@ -338,13 +353,11 @@ fun DrawScope.drawSedan(x: Float, y: Float, w: Float, h: Float, carColor: Color)
     drawRect(tireColor, Offset(x - 2.dp.toPx(), y + h * 0.7f), Size(wheelW, wheelH))
     drawRect(tireColor, Offset(x + w - wheelW + 2.dp.toPx(), y + h * 0.7f), Size(wheelW, wheelH))
 
-    // Body
     drawRect(carColor, Offset(x, y + h * 0.1f), Size(w, h * 0.8f))
     
-    // Windows
+
     drawRect(windowColor, Offset(x + w * 0.15f, y + h * 0.3f), Size(w * 0.7f, h * 0.35f))
-    
-    // Hood lines
+
     drawRect(Color.Black.copy(alpha = 0.2f), Offset(x + w * 0.2f, y + h * 0.25f), Size(w * 0.6f, 2.dp.toPx()))
 }
 

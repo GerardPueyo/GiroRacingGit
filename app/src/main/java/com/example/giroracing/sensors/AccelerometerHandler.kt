@@ -6,15 +6,21 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 
+/**
+ * Manages the device's accelerometer sensor to detect phone tilt.
+ */
 class AccelerometerHandler(context: Context) {
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
     /**
-     * Checks if the accelerometer sensor is available on the device.
+     * Checks if the device actually has an accelerometer.
      */
     fun isAvailable(): Boolean = accelerometer != null
 
+    /**
+     * Registers the listener and starts providing tilt updates.
+     */
     fun start(onTiltChanged: (Float) -> Unit): SensorEventListener? {
         if (accelerometer == null) return null
         
@@ -31,6 +37,9 @@ class AccelerometerHandler(context: Context) {
         return sensorListener
     }
 
+    /**
+     * Unregisters the listener to save battery when not in the game.
+     */
     fun stop(listener: SensorEventListener?) {
         listener?.let {
             sensorManager.unregisterListener(it)

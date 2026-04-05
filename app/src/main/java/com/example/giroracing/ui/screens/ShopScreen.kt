@@ -28,12 +28,20 @@ import androidx.compose.ui.unit.sp
 import com.example.giroracing.R
 import com.example.giroracing.viewmodel.CarModel
 
+/**
+ * Data model for a car skin in the shop.
+ */
 data class CarSkin(val name: String, val price: String, val color: Color, val model: CarModel)
 
+/**
+ * The shop screen where players can select different car models and colors.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShopScreen(onBackClick: () -> Unit, onSkinSelect: (Color, CarModel) -> Unit) {
     val ownedText = stringResource(id = R.string.owned)
+    
+    // List of available car skins
     val skins = listOf(
         CarSkin("Ferrari Red", ownedText, Color(0xFFE10600), CarModel.F1),
         CarSkin("McLaren Orange", "$1.99", Color(0xFFFF8000), CarModel.F1),
@@ -75,6 +83,7 @@ fun ShopScreen(onBackClick: () -> Unit, onSkinSelect: (Color, CarModel) -> Unit)
             .background(backgroundGradient)
             .padding(paddingValues)
         ) {
+            // Scrollable list of shop items
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -89,6 +98,9 @@ fun ShopScreen(onBackClick: () -> Unit, onSkinSelect: (Color, CarModel) -> Unit)
     }
 }
 
+/**
+ * A single item card in the shop showing the car preview and buy/select button.
+ */
 @Composable
 fun ShopItem(skin: CarSkin, onSkinSelect: (Color, CarModel) -> Unit) {
     val ownedText = stringResource(id = R.string.owned)
@@ -109,7 +121,7 @@ fun ShopItem(skin: CarSkin, onSkinSelect: (Color, CarModel) -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Visual representation of the car in a cartoon bubble
+                // Mini preview of the car skin
                 Box(
                     modifier = Modifier
                         .size(70.dp, 90.dp)
@@ -146,7 +158,6 @@ fun ShopItem(skin: CarSkin, onSkinSelect: (Color, CarModel) -> Unit) {
                 }
             }
 
-            // Cartoon style button
             GameButtonSmall(
                 text = if (skin.price == ownedText) stringResource(id = R.string.select) 
                        else stringResource(id = R.string.buy, skin.price),
@@ -189,6 +200,9 @@ fun GameButtonSmall(
     }
 }
 
+/**
+ * Simplified drawing of the F1 car for the shop preview.
+ */
 private fun DrawScope.drawF1Preview(carColor: Color) {
     val w = size.width
     val h = size.height
@@ -206,6 +220,9 @@ private fun DrawScope.drawF1Preview(carColor: Color) {
     drawRect(carColor, Offset(w * 0.1f, h * 0.85f), Size(w * 0.8f, h * 0.08f))
 }
 
+/**
+ * Simplified drawing of the Sedan car for the shop preview.
+ */
 private fun DrawScope.drawSedanPreview(carColor: Color) {
     val w = size.width
     val h = size.height

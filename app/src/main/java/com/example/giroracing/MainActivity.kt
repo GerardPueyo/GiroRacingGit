@@ -16,11 +16,16 @@ import com.example.giroracing.ui.screens.ShopScreen
 import com.example.giroracing.ui.theme.GiroRacingTheme
 import com.example.giroracing.viewmodel.GiroRacingViewModel
 
+/**
+ * Main entry point for the app. Sets up the navigation and provides the ViewModel 
+ * to all screens using a custom factory.
+ */
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Initialize the repository for user preferences and the ViewModel factory
         val repository = UserPreferencesRepository(applicationContext)
         val viewModelFactory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -33,6 +38,7 @@ class MainActivity : ComponentActivity() {
                 val viewModel: GiroRacingViewModel = viewModel(factory = viewModelFactory)
                 val navController = rememberNavController()
                 
+                // Navigation setup for the main menu, game, and shop
                 NavHost(navController = navController, startDestination = "menu") {
                     composable("menu") {
                         MainMenuScreen(

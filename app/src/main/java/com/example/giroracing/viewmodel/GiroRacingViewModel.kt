@@ -14,13 +14,25 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
+/**
+ * Simple data class for obstacles on the road.
+ */
 data class Obstacle(val xOffset: Float, var y: Float, val color: Color)
 
+/**
+ * Available car models in the game.
+ */
 enum class CarModel {
     F1, SEDAN
 }
 
+/**
+ * Handles all the game logic, state, and car physics.
+ * Communicates with the repository to persist selected car skins.
+ */
 class GiroRacingViewModel(private val repository: UserPreferencesRepository) : ViewModel() {
+    
+    // Game state variables
     var carXOffsetPx by mutableFloatStateOf(0f)
         private set
 
@@ -49,6 +61,7 @@ class GiroRacingViewModel(private val repository: UserPreferencesRepository) : V
 
     val obstacles = mutableStateListOf<Obstacle>()
 
+    // Constants for car movement and game feel
     private val maxSpeed = 50f
     private val accelerationRate = 0.35f
     private val decelerationRate = 0.05f
@@ -57,7 +70,7 @@ class GiroRacingViewModel(private val repository: UserPreferencesRepository) : V
     private var lastSpawnTime = 0L
 
     init {
-        // Load saved car skin
+        // Load saved car preferences when the ViewModel is created
         viewModelScope.launch {
             repository.carColor.collectLatest { color ->
                 carColor = color
@@ -70,12 +83,18 @@ class GiroRacingViewModel(private val repository: UserPreferencesRepository) : V
         }
     }
 
+    /**
+     * Updates car position based on accelerometer tilt.
+     */
     fun updateOffset(tiltX: Float) {
         if (isGameOver) return
         val sensitivity = if (currentSpeed > 0) 18f else 0f
         carXOffsetPx -= (tiltX * sensitivity)
     }
 
+    /**
+     * Keeps the car within the road boundaries.
+     */
     fun limitOffset(minX: Float, maxX: Float) {
         carXOffsetPx = carXOffsetPx.coerceIn(minX, maxX)
     }
@@ -88,6 +107,9 @@ class GiroRacingViewModel(private val repository: UserPreferencesRepository) : V
         isBraking = active
     }
 
+    /**
+     * Updates the car's appearance and saves it to data store.
+     */
     fun setCarSkin(color: Color, model: CarModel) {
         carColor = color
         carModel = model
@@ -96,6 +118,9 @@ class GiroRacingViewModel(private val repository: UserPreferencesRepository) : V
         }
     }
 
+    /**
+     * Resets game variables for a new round.
+     */
     fun resetGame() {
         carXOffsetPx = 0f
         obstacles.clear()
@@ -107,6 +132,9 @@ class GiroRacingViewModel(private val repository: UserPreferencesRepository) : V
         lastSpawnTime = System.currentTimeMillis()
     }
 
+    /**
+     * Main game loop function. Updates movement, checks for collisions, and spawns obstacles.
+     */
     fun updateGame(
         canvasHeight: Float,
         roadWidth: Float,
@@ -117,6 +145,7 @@ class GiroRacingViewModel(private val repository: UserPreferencesRepository) : V
     ) {
         if (isGameOver) return
 
+        // Speed physics
         if (isBraking) {
             currentSpeed = (currentSpeed - brakeForce).coerceAtLeast(0f)
         } else if (isAccelerating) {
@@ -125,9 +154,11 @@ class GiroRacingViewModel(private val repository: UserPreferencesRepository) : V
             currentSpeed = (currentSpeed - decelerationRate).coerceAtLeast(0f)
         }
 
+        // Score based on speed
         score += (currentSpeed * currentSpeed / 50f).toLong()
         roadOffset = (roadOffset + currentSpeed) % 100f
 
+        // Obstacle movement and collision detection
         val iterator = obstacles.iterator()
         while (iterator.hasNext()) {
             val obstacle = iterator.next()
@@ -149,6 +180,7 @@ class GiroRacingViewModel(private val repository: UserPreferencesRepository) : V
             }
         }
 
+        // Randomly spawn new obstacles based on current speed
         val currentTime = System.currentTimeMillis()
         if (currentSpeed > 5f) {
             val spawnInterval = (1500 * (15f / currentSpeed)).toLong().coerceAtLeast(350L)
@@ -170,6 +202,9 @@ class GiroRacingViewModel(private val repository: UserPreferencesRepository) : V
         }
     }
 
+    /**
+     * Checks if the car's bounding box overlaps with an obstacle's bounding box.
+     */
     private fun checkCollision(
         px: Float, py: Float, pw: Float, ph: Float,
         ox: Float, oy: Float, ow: Float, oh: Float
